@@ -26,8 +26,11 @@ But if the number of the mafia will be greater than the number of civilians, the
 Enter the scene and press `F` (_you need to wait for (`TIME_BEFORE_NEW_VOTE_MS`) [20 by default, see below] seconds to start the vote!_). Then you will see a window, type name of the player like player#1234 and press Kick.
 
 After that, all users will see the Voting UI to kick or not the player. Voting lasts for 30 seconds, then if more than half of users voted and the number of yes votes greater than the number of no votes, player will be kicked (teleported to x: 0, y: 0, z: 0)
+
 **Note:** you cannot vote against yourself!
+
 **Note:** you cannot start more the one voting at the same time!
+
 **Note:** you cannot start the voting against players that doesn't exist on the scene!
 
 ## Try it out locally
