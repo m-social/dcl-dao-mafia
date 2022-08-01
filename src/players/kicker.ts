@@ -11,8 +11,10 @@ import { onId } from 'src/players/id'
 import { setTimeout } from '@dcl/ecs-scene-utils'
 import findIndexOf from 'src/utils/array/findIndexOf'
 import { getPlayerData } from '@decentraland/Players'
+import { scoped } from 'src/p2p/global'
+import { TELEPORT_KICKED_PLAYER_TO, TIME_BEFORE_NEW_VOTE_MS, VOTING_DURATION_MS } from 'src/constants/index'
 
-const kicker = new MessageBus()
+const kicker = scoped('kicker')
 
 interface KickerKickInfo {
   whom: string
@@ -28,7 +30,7 @@ const activeVoting: { whom: string; initiator: string }[] = []
 let lastKickTime = Date.now()
 
 export async function kickVote(name: string) {
-  if (Date.now() - lastKickTime < 20000) {
+  if (Date.now() - lastKickTime < TIME_BEFORE_NEW_VOTE_MS) {
     ui.displayAnnouncement('Wait 20 seconds to start new vote!', 5, Color4.Red())
     return
   }
@@ -75,7 +77,7 @@ export async function kickVote(name: string) {
       yes: [],
       no: [],
       whom: userId,
-      timer: setTimeout(30000, async () => {
+      timer: setTimeout(VOTING_DURATION_MS, async () => {
         await finishKick()
       })
     }
@@ -140,7 +142,7 @@ kicker.on('kick', async ({ userId }) => {
   const data = await userData()
 
   if (userId === data?.userId) {
-    await movePlayerTo({ x: 0, y: 2, z: 0 })
+    await movePlayerTo(TELEPORT_KICKED_PLAYER_TO)
     ui.displayAnnouncement(`Bye bye, ${data?.displayName}!`, 5, Color4.Red())
   }
 })
@@ -232,7 +234,11 @@ export function hasActiveKick() {
 }
 
 export function canStartVote() {
-  return Date.now() - lastKickTime >= 20000
+  return Date.now() - lastKickTime >= TIME_BEFORE_NEW_VOTE_MS
+}
+
+export function remainingSecondsBeforeKick() {
+  return Math.round((TIME_BEFORE_NEW_VOTE_MS - (Date.now() - lastKickTime)) / 1000)
 }
 
 export function anotherInProgress() {

@@ -1,8 +1,8 @@
 import * as ui from '@dcl/ui-scene-utils'
 import { UserData } from '@decentraland/Players'
 
-export default function createSelectPlayerPrompt(players: UserData[], onSelect: (user: UserData) => void) {
-  const height = players.length * 35 + 150
+export default function createSelectPlayerPrompt(players: UserData[], onSelect: (player: UserData) => void) {
+  const height = (players.length || 1) * 35 + 150
 
   const prompt = new ui.CustomPrompt(ui.PromptStyles.LIGHT, undefined, height)
 
@@ -41,6 +41,10 @@ export default function createSelectPlayerPrompt(players: UserData[], onSelect: 
 
     return cb
   })
+
+  if (!players.length) {
+    prompt.addText('Nobody to kick!', 0, 20, Color4.Purple(), 20)
+  }
 
   prompt.addButton(
     'Select',
