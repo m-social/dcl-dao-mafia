@@ -1,0 +1,37 @@
+{
+  "display": {
+    "title": "Mafia",
+    "description": "Game for fun",
+    "navmapThumbnail": "images/logo.png",
+    "favicon": "images/logo.png"
+  },
+  "owner": "M-Social",
+  "contact": {
+    "name": "Eugene Kuzin",
+    "email": "e.kuzin@msocialproduction.com"
+  },
+  "main": "bin/game.js",
+  "tags": ["mafia", "games"],
+  "scene": {
+    "parcels": ["0,0"],
+    "base": "0,0"
+  },
+  "spawnPoints": [
+    {
+      "name": "spawn",
+      "default": true,
+      "position": {
+        "x": 15,
+        "y": 15,
+        "z": 1
+      },
+      "cameraTarget": {
+        "x": 8,
+        "y": 1,
+        "z": 8
+      }
+    }
+  ],
+  "requiredPermissions": ["ALLOW_TO_MOVE_PLAYER_INSIDE_SCENE"],
+  "featureToggles": {}
+}
