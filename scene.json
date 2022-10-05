@@ -16,6 +16,10 @@
     "parcels": ["0,0"],
     "base": "0,0"
   },
+  "communications": {
+    "type": "webrtc",
+    "signalling": "https://signalling-01.decentraland.org"
+  },
   "spawnPoints": [
     {
       "name": "spawn",
@@ -33,5 +37,26 @@
     }
   ],
   "requiredPermissions": ["ALLOW_TO_MOVE_PLAYER_INSIDE_SCENE"],
-  "featureToggles": {}
+  "featureToggles": {},
+  "policy": {
+    "contentRating": "E",
+    "fly": true,
+    "voiceEnabled": true,
+    "blacklist": [],
+    "teleportPosition": ""
+  },
+  "source": {
+    "version": 1,
+    "origin": "builder",
+    "projectId": "13a5cb70-9c53-4cdd-a7e2-92d1ddc4be73",
+    "point": {
+      "x": 0,
+      "y": 0
+    },
+    "rotation": "east",
+    "layout": {
+      "rows": 2,
+      "cols": 2
+    }
+  }
 }

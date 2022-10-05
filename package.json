@@ -1,6 +1,6 @@
 {
   "name": "dcl-mafia-the-game",
-  "version": "1.0.0",
+  "version": "1.1.0-beta.3",
   "description": "Mafia game in the Decentraland",
   "scripts": {
     "start": "CI=true dcl start -p ${PORT:=8000}",
@@ -12,11 +12,12 @@
     "ecs:install": "npm install --save-dev decentraland-ecs@latest",
     "ecs:install-next": "npm install --save-dev decentraland-ecs@next",
     "lint": "eslint . --ext .ts",
-    "lint:fix": "eslint . --ext .ts --fix"
+    "lint:fix": "eslint . --ext .ts --fix",
+    "postinstall": "patch-package"
   },
   "devDependencies": {
     "@dcl/eslint-config": "^1.0.1",
-    "decentraland-ecs": "latest"
+    "decentraland-ecs": "^6.11.8"
   },
   "engines": {
     "node": ">=14.0.0",
@@ -25,7 +26,9 @@
   "dependencies": {
     "@dcl/ecs-scene-utils": "^1.7.5",
     "@dcl/ui-scene-utils": "^1.8.4",
-    "decentraland": "^3.11.0"
+    "decentraland": "^3.12.2",
+    "decentraland-builder-scripts": "^0.24.0",
+    "patch-package": "^6.4.7"
   },
   "volta": {
     "node": "16.16.0"

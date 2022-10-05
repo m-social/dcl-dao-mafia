@@ -1,0 +1,13 @@
+diff --git a/node_modules/decentraland-builder-scripts/types.d.ts b/node_modules/decentraland-builder-scripts/types.d.ts
+index cba47d7..a7e15a9 100644
+--- a/node_modules/decentraland-builder-scripts/types.d.ts
++++ b/node_modules/decentraland-builder-scripts/types.d.ts
+@@ -11,7 +11,7 @@ type BaseAction<T extends {}> = {
+ 
+ declare type Actions = BaseAction<any>[]
+ 
+-declare type Action<T> = BaseAction<T> & {
++declare type Action<T extends {}> = BaseAction<T> & {
+   sender: string
+ }
+ 
