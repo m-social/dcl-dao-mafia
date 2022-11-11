@@ -2,7 +2,7 @@ import { CustomPrompt, displayAnnouncement } from '@dcl/ui-scene-utils'
 import createSelectPlayerPrompt from '../ui/select/select-player'
 import phasesMessageBus, { getDayNumber, getPhase, getPhaseId } from '../p2p/phases'
 import votingMessageBus from '../p2p/voting'
-import { head, isHead, leave, me, _unsafeParticipants } from './participants'
+import { getHead, isHead, leave, me, _unsafeParticipants } from './participants'
 import selfEnterLeaveEmitter from '../events/self-leave-enter'
 import { getPlayersRoles, getRole, getRolesCount, isActivePlayer, isPlayer } from './roles'
 import { result } from './voting'
@@ -10,7 +10,8 @@ import {
   DAY_DISCUSSION_DURATION_MS,
   GAME_PHASES_DURATION_MS,
   START_PHASE,
-  WAIT_AFTER_GAME_END_MS
+  WAIT_AFTER_GAME_END_MS,
+  WAIT_BEFORE_VOTING_RESULTS
 } from '../constants/index'
 import headEmitter from '../events/head'
 import NightWindow from '../ui/window/night'
@@ -24,8 +25,11 @@ import rolesEmitter, { onRoles } from '../events/roles'
 import VotingResultsWindow from '../ui/window/voting-result'
 import votingEmitter from '../events/voting'
 import userData from '../user/data'
+import { setTimeout } from '@dcl/ecs-scene-utils'
+import clearTimeout from '../utils/clearTimeout'
 
 let timerEntity: Entity | null = null
+let votingTimer: Entity | null = null
 // const label = new CornerLabel('', -135)
 // label.uiText.hTextAlign = 'right'
 // label.hide()
@@ -40,6 +44,8 @@ const winnerUi = new WinnerWindow()
 const killedUi = new KilledWindow()
 const discussionUi = new DiscussionWindow()
 const votingResultsUi = new VotingResultsWindow()
+
+let playersInfo: ReturnType<typeof _unsafeParticipants> = {}
 
 winnerUi.onClick = new OnPointerDown(async () => {
   await leave()
@@ -88,6 +94,10 @@ selfEnterLeaveEmitter.on('leave', () => {
 })
 
 phasesMessageBus.on('start', () => {
+  if (isActivePlayer()) {
+    participantEmitter.emit('hide-ui', undefined)
+  }
+
   discussionUi.hide()
   winnerUi.hide()
 
@@ -98,11 +108,19 @@ phasesMessageBus.on('start', () => {
   if (isHead()) {
     // reset it again
 
-    phasesMessageBus.emit(START_PHASE, { increaseDay: false })
+    phasesMessageBus.emit(START_PHASE, { isInitial: true, increaseDay: false })
+  }
+})
+
+phasesMessageBus.on(START_PHASE, ({ isInitial }) => {
+  if (isInitial && isActivePlayer()) {
+    participantEmitter.emit('hide-ui', undefined)
   }
 })
 
 phasesMessageBus.on('cancel', ({ inactive }) => {
+  clearTimeout(votingTimer)
+
   onCancel()
 
   if (inactive) {
@@ -122,6 +140,8 @@ phasesMessageBus.on('end', ({ winner }: { winner: string }) => {
   // } else if (winner === 'civil') {
   //   displayAnnouncement('The Villagers won!', WINNER_MESSAGE_DURATION_S, Color4.Green())
   // }
+
+  clearTimeout(votingTimer)
 
   hideDayNightWindows()
 
@@ -175,14 +195,14 @@ phasesMessageBus.on('day', () => {
 
     const players = getPlayersRoles()
       ?.filter(({ id, role: playerRole }) => id !== from.userId && (role !== 'mafia' || playerRole !== 'mafia'))
-      .map(({ id }) => _unsafeParticipants()[id])
+      .map(({ id }) => playersInfo[id])
       .filter(Boolean)
 
-    log('day::players', getPlayersRoles(), JSON.parse(JSON.stringify(_unsafeParticipants())), players)
+    log('day::players', getPlayersRoles(), JSON.parse(JSON.stringify(playersInfo)), players)
 
     if (players) {
       if (_prompt) {
-        log('prompt is already open, ', head())
+        log('prompt is already open, ', getHead())
         _prompt.hide()
         _prompt = null
       }
@@ -231,20 +251,20 @@ phasesMessageBus.on('night', () => {
     nightUi.updateMafia(
       getPlayersRoles()
         ?.filter(({ id, role }) => role === 'mafia' && id !== from.userId)
-        .map(({ id }) => _unsafeParticipants()[id]?.displayName)
+        .map(({ id }) => playersInfo[id]?.displayName)
         .filter(Boolean) ?? []
     )
 
     const civil = getPlayersRoles()
       ?.filter(({ role }) => role === 'civil')
-      .map(({ id }) => _unsafeParticipants()[id])
+      .map(({ id }) => playersInfo[id])
       .filter(Boolean)
 
-    log('night::players', getPlayersRoles(), JSON.parse(JSON.stringify(_unsafeParticipants())), civil)
+    log('night::players', getPlayersRoles(), JSON.parse(JSON.stringify(playersInfo)), civil)
 
     if (civil) {
       if (_prompt) {
-        log('prompt is already open, ', head())
+        log('prompt is already open, ', getHead())
         _prompt.hide()
         _prompt = null
       }
@@ -357,9 +377,11 @@ phasesMessageBus.on('voted', () => {
 
   const nextPhase = phase === 'day' ? 'night' : phase === 'night' ? 'discussion' : undefined
 
-  if (isHead() && !tryFinishGame() && nextPhase) {
-    phasesMessageBus.emit(nextPhase, {})
-  }
+  votingTimer = setTimeout(WAIT_BEFORE_VOTING_RESULTS, () => {
+    if (isHead() && !tryFinishGame() && nextPhase && votingTimer) {
+      phasesMessageBus.emit(nextPhase, {})
+    }
+  })
 })
 
 votingMessageBus.on('results', async ({ phase, voting }: { phase: string; voting: Record<string, string[]> }) => {
@@ -377,7 +399,7 @@ votingMessageBus.on('results', async ({ phase, voting }: { phase: string; voting
   const results: [who: string, whom: string][] = []
 
   for (const whom in voting) {
-    const { displayName: whomName } = _unsafeParticipants()[whom] ?? {}
+    const { displayName: whomName } = playersInfo[whom] ?? {}
 
     for (const who of voting[whom]) {
       if (who === userId) {
@@ -388,7 +410,7 @@ votingMessageBus.on('results', async ({ phase, voting }: { phase: string; voting
         continue
       }
 
-      const { displayName: whoName } = _unsafeParticipants()[who] ?? {}
+      const { displayName: whoName } = playersInfo[who] ?? {}
 
       if (whoName) {
         results.push([whoName, whomName])
@@ -519,10 +541,19 @@ onLeaveSceneObservable.add(() => {
   }
 })
 
+function stopVotingTimeout() {
+  clearTimeout(votingTimer)
+  votingTimer = null
+}
+
 onRoles('after-inactive-kick', () => {
-  if (isHead()) {
-    tryFinishGame()
+  if (isHead() && tryFinishGame()) {
+    stopVotingTimeout()
   }
+})
+
+onRoles('cancel', () => {
+  stopVotingTimeout()
 })
 
 // restart voting phase
@@ -535,4 +566,8 @@ headEmitter.on('leave', () => {
 rolesEmitter.on('self-inactive', () => {
   softCancel()
   votingResultsUi.hide()
+})
+
+phasesMessageBus.on('roles', () => {
+  playersInfo = { ..._unsafeParticipants() }
 })

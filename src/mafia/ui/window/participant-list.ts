@@ -132,7 +132,12 @@ export default class ParticipantListWindow extends UiWindow {
     this.gameStartInfo.value = 'Another game is already in progress. Wait for the next game.'
   }
 
-  public updateParticipants(participants: string[]) {
+  public hideLeaveButton() {
+    this.leave.visible = false
+    this.leaveText.visible = false
+  }
+
+  public updateParticipants(participants: string[], hasActiveTimeout = false) {
     log(this.addedInfo.height)
 
     // const size = Math.max(this.participants.length, participants.length)
@@ -181,8 +186,8 @@ export default class ParticipantListWindow extends UiWindow {
     } else {
       this.remaining.visible = false
 
-      if (this.gameStartInfo.value === `The game will start when at least ${MIN_PLAYER_COUNT} players connect.`) {
-        this.gameStartInfo.value = ''
+      if (!hasActiveTimeout) {
+        this.gameStartInfo.value = 'The game will start soon...'
       }
     }
 

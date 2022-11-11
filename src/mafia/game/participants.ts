@@ -2,7 +2,7 @@ import { displayAnnouncement } from '@dcl/ui-scene-utils'
 import { UserData } from '@decentraland/Identity'
 import { MAX_PLAYERS_COUNT, MIN_PLAYER_COUNT, WAIT_BEFORE_START_MS } from '../constants/index'
 import headEmitter from '../events/head'
-import { emitParticipant } from '../events/participants'
+import participantEmitter, { emitParticipant } from '../events/participants'
 import participantsMessageBus from '../p2p/participants'
 import phasesMessageBus, { getPhase, internalPhaseEmitter } from '../p2p/phases'
 import ParticipantListWindow from '../ui/window/participant-list'
@@ -62,7 +62,10 @@ export const leave = () => {
 
 function updateParticipantsUI() {
   const p = participants().map(({ displayName }) => displayName)
-  participantsUi.updateParticipants(p)
+  participantsUi.updateParticipants(p, !!beforeGameTimeout)
+  if (getPhase()) {
+    participantsUi.setActiveGameStartText()
+  }
 }
 
 function stopTimeout() {
@@ -72,34 +75,14 @@ function stopTimeout() {
   }
 }
 
-function tryStartGame(time?: number) {
-  if (!getPhase() && size() >= MIN_PLAYER_COUNT) {
-    log('emit:roles')
+function tryStartGame() {
+  if (!getPhase() && size() >= MIN_PLAYER_COUNT && isHead()) {
+    // log('emit:roles')
     // phasesMessageBus.emit('roles', {})
-
-    if (beforeGameTimeout || getPhase()) {
-      return
-    }
-
-    let t = Math.max(Math.floor((WAIT_BEFORE_START_MS - (time ?? 0)) / 1000), 0)
-
-    participantsUi.updateTimeout(t)
-
-    beforeGameTimeout = setInterval(1000, () => {
-      --t
-
-      participantsUi.updateTimeout(t)
-      if (t <= 0) {
-        stopTimeout()
-
-        if (isHead()) {
-          phasesMessageBus.emit('roles', {})
-        }
-      }
-    })
 
     participantsMessageBus.emit('full-participants', {
       participants: _participants,
+      head: getHead(),
       time: Date.now()
     })
 
@@ -130,13 +113,11 @@ function onParticipate(data: UserDataWithTimestamp) {
 
   tryStartGame()
 
-  updateParticipantsUI()
+  if (_info) {
+    updateParticipantsUI()
+  }
 
   if (_info?.userId === userId) {
-    if (getPhase()) {
-      participantsUi.setActiveGameStartText()
-    }
-
     participantsUi.show()
   }
 }
@@ -179,16 +160,55 @@ participantsMessageBus.on('leave', async ({ userId, inactive }: UserData & { ina
   }
 })
 
-participantsMessageBus.on('full-participants', ({ participants, time }) => {
+participantsMessageBus.on('full-participants', ({ participants, head, time }, from) => {
   // log(_from, participants)
-  if (size(participants) <= size()) {
+
+  const initialHead = getHead()
+
+  log('[full-participants::received]')
+
+  if (!initialHead || head._ts < initialHead._ts) {
+    _head = head
+  } else if (head.userId !== initialHead.userId) {
+    log('[full-participants::wrong-head]', initialHead, head)
     return
   }
 
-  _participants = participants
+  if (from !== 'self') {
+    _participants = participants
+  }
+
+  if (!_info) {
+    log('[full-participants::no-info]')
+    return
+  }
+
   updateParticipantsUI()
-  _head = findHead()
-  tryStartGame(Date.now() - time)
+
+  if (beforeGameTimeout || getPhase()) {
+    log('[full-participants::existing-timer-phase]', beforeGameTimeout, getPhase())
+    return
+  }
+
+  const now = Date.now()
+
+  let t = Math.max(Math.floor((WAIT_BEFORE_START_MS - (now - (time ?? now))) / 1000), 0)
+
+  participantsUi.updateTimeout(t)
+
+  beforeGameTimeout = setInterval(1000, () => {
+    --t
+
+    participantsUi.updateTimeout(t)
+    if (t <= 0) {
+      participantsUi.hideLeaveButton()
+      stopTimeout()
+
+      if (isHead()) {
+        phasesMessageBus.emit('roles', {})
+      }
+    }
+  })
 })
 
 participantsMessageBus.on('participate-error', async ({ reason, to }) => {
@@ -298,7 +318,7 @@ function cmpHead(actual: UserDataWithTimestamp | null, next: UserDataWithTimesta
   return actual._ts === next._ts && next.userId < actual.userId ? next : actual
 }
 
-export function head() {
+export function getHead() {
   return _head
 }
 
@@ -321,12 +341,19 @@ participantsUi.onClick = new OnPointerDown(() => {
   void leave()
 })
 
-phasesMessageBus.on('start', () => {
+participantEmitter.on('hide-ui', () => {
   participantsUi.hide()
 })
 
 internalPhaseEmitter.on('log-head', ({ phase }) => {
-  log(`phase::${phase} - `, head())
+  log(`phase::${phase} - `, getHead())
+})
+
+phasesMessageBus.on('roles', () => {
+  if (beforeGameTimeout) {
+    participantsUi.hideLeaveButton()
+    stopTimeout()
+  }
 })
 
 // participantsUi.updateParticipants(['test', 'test', 'test', 'test'])

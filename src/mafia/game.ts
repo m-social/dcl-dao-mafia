@@ -54,8 +54,8 @@ export default function setupMafia({
 
   table.addComponent(
     new Transform({
-      position: position ?? new Vector3(8, -0.1, 8),
-      scale: size ?? new Vector3(1, 1, 1)
+      position: position ?? new Vector3(11.5, 2, 5),
+      scale: size ?? new Vector3(0.85, 0.85, 0.85)
       // scale: new Vector3(20, 20, 20)
     })
   )
@@ -134,6 +134,7 @@ export default function setupMafia({
 
     billboard.addComponent(new Billboard())
 
+    engine.addEntity(billboard)
     billboard.setParent(table)
   }
 

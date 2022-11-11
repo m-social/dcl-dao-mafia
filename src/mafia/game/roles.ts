@@ -1,4 +1,4 @@
-import { head, isHead, participants as getParticipants } from './participants'
+import { getHead, isHead, participants as getParticipants } from './participants'
 import selfEnterLeaveEmitter from '../events/self-leave-enter'
 import userData from '../user/data'
 
@@ -198,7 +198,7 @@ participantEmitter.on('self-leave', () => {
 // }
 
 phasesMessageBus.on('roles', () => {
-  log(head())
+  log(getHead())
   if (isHead()) {
     assignRoles()
   }

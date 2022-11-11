@@ -20,7 +20,14 @@ export const PLAYER_INACTIVE_MESSAGE_DURATION_S = 5
 
 export const TELEPORT_KILLED_PLAYER_TO = { x: 0, y: 2, z: 0 }
 
+/**
+ * @deprecated
+ */
 export const SHOW_ROLE_ICON = true
+
+/**
+ * @deprecated
+ */
 export const SHOW_PHASE_LABEL = true
 
 export const KICK_VOTING_PROMPT_EXAMPLE = true
